@@ -4,12 +4,18 @@ SDIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 source "$SDIR/helpers.sh"
 
 get_temperature() {
-    local thermal_zone=$(grep -l x86_pkg_temp /sys/class/thermal/thermal_zone*/type)
-    if [ -z "$thermal_zone" ]; then
-        echo "N/A"
-        return
+    local thermal_zone=$(grep -l x86_pkg_temp /sys/class/thermal/thermal_zone*/type | head -n1)
+    if [ -f "$thermal_zone" ]; then
+		temperature=$(($(cat $(dirname $thermal_zone)/temp) / 1000))
+	else
+		thermal_zone="$(for i in /sys/devices/pci0000\:00/*/hwmon/hwmon*/*_label; do grep -l Tctl $i; done | head -n1 | sed 's/label$/input/')"
+		if [ -f $thermal_zone ]; then
+			temperature=$(($(cat $thermal_zone) / 1000))
+		else
+			echo "N/A"
+			return
+		fi
     fi
-    temperature=$(($(cat $(dirname $thermal_zone)/temp) / 1000))
     echo "$temperature °C"
 }
 
